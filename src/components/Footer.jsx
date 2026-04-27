@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between gap-10">
           <div>
             <span className="text-xl font-black tracking-tight text-zinc-900">
-              LE FORCE <span className="text-violet-600">MEDIA</span>
+              leForce <span className="text-violet-600">Media</span>
             </span>
             <p className="mt-4 text-zinc-500 text-sm leading-relaxed max-w-xs">
               {t('footer.tagline')}

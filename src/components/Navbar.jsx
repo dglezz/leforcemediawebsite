@@ -31,7 +31,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link to="/">
           <span className="text-xl font-black tracking-tight text-zinc-900">
-            LE FORCE <span className="text-violet-600">MEDIA</span>
+            leForce <span className="text-violet-600">Media</span>
           </span>
         </Link>
 
