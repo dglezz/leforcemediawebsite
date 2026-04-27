@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { supabase } from '../lib/supabase'
+import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -36,6 +36,10 @@ export default function Apply() {
   }
 
   const uploadFiles = async (email) => {
+    if (!supabase) {
+      throw new Error('Supabase is not configured.')
+    }
+
     const urls = []
     for (const file of files) {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -43,12 +47,17 @@ export default function Apply() {
       const { data, error } = await supabase.storage
         .from('application-files')
         .upload(path, file, { upsert: false })
-      if (!error && data) {
-        const { data: urlData } = supabase.storage
-          .from('application-files')
-          .getPublicUrl(data.path)
-        urls.push(urlData.publicUrl)
+
+      if (error) {
+        throw error
       }
+
+      if (!data) continue
+
+      const { data: urlData } = supabase.storage
+        .from('application-files')
+        .getPublicUrl(data.path)
+      urls.push(urlData.publicUrl)
     }
     return urls
   }
@@ -58,32 +67,48 @@ export default function Apply() {
     setError(null)
     setUploading(true)
 
-    const fileUrls = files.length > 0 ? await uploadFiles(form.email) : []
-
-    const { error: dbError } = await supabase.from('applications').insert({
-      first_name: form.firstName,
-      last_name: form.lastName,
-      email: form.email,
-      phone: form.phone || null,
-      country: form.country,
-      tiktok_handle: form.handle,
-      additional_links: form.additionalLinks || null,
-      content_type: form.contentType,
-      why_us: form.whyUs,
-      skills: form.skills || null,
-      followers: form.followers,
-      monthly_views: form.monthlyViews || null,
-      content_files: fileUrls.length > 0 ? fileUrls : null,
-    })
-
-    setUploading(false)
-
-    if (dbError) {
-      setError('Hubo un error al enviar tu solicitud. Intenta de nuevo.')
+    if (!isSupabaseConfigured || !supabase) {
+      setUploading(false)
+      setError('El formulario no está configurado todavía. Agrega VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en Vercel.')
       return
     }
-    setSubmitted(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+
+    try {
+      const fileUrls = files.length > 0 ? await uploadFiles(form.email) : []
+
+      const payload = {
+        first_name: form.firstName,
+        last_name: form.lastName,
+        email: form.email,
+        phone: form.phone || null,
+        country: form.country,
+        tiktok_handle: form.handle,
+        additional_links: form.additionalLinks || null,
+        content_type: form.contentType,
+        why_us: form.whyUs,
+        skills: form.skills || null,
+        followers: form.followers,
+        monthly_views: form.monthlyViews || null,
+      }
+
+      if (fileUrls.length > 0) {
+        payload.content_files = fileUrls
+      }
+
+      const { error: dbError } = await supabase.from('applications').insert(payload)
+
+      if (dbError) {
+        throw dbError
+      }
+
+      setSubmitted(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (err) {
+      console.error('Application form submission failed.', err)
+      setError('Hubo un error al enviar tu solicitud. Verifica la configuración de Supabase e intenta de nuevo.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (

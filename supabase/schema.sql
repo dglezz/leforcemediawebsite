@@ -14,7 +14,8 @@ create table applications (
   why_us text not null,
   skills text,
   followers text not null,
-  monthly_views text
+  monthly_views text,
+  content_files text[]
 );
 
 -- Allow anyone to insert (form submissions from the website)
